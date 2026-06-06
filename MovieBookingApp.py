@@ -1,18 +1,7 @@
 
 import streamlit as st
-import pyodbc
+from db import conn, cursor
 import pandas as pd
-
-# ================= DATABASE =================
-
-conn = pyodbc.connect(
-    # "Driver={SQL Server};Server=localhost\SQLEXPRESS;Database=MovieDB;Trusted_Connection=True;"
-    
-    r"Driver={SQL Server};Server=localhost\SQLEXPRESS;Database=MovieDB;Trusted_Connection=True;"
-
-)
-
-cursor = conn.cursor()
 
 # ================= PAGE CONFIG =================
 
@@ -27,21 +16,11 @@ st.set_page_config(
 st.markdown("""
 <style>
 
-.main{
-    background-color:#f5f7fa;
-}
-
 .title{
     text-align:center;
     color:#ff4b4b;
     font-size:45px;
     font-weight:bold;
-}
-
-.card{
-    padding:20px;
-    border-radius:15px;
-    background:white;
 }
 
 </style>
@@ -87,14 +66,14 @@ if menu == "🏠 Dashboard":
 
     with col1:
         st.metric(
-            label="🎥 Total Movies",
-            value=total_movies
+            "🎥 Total Movies",
+            total_movies
         )
 
     with col2:
         st.metric(
-            label="🎟️ Available Seats",
-            value=seats
+            "🎟️ Available Seats",
+            seats
         )
 
     st.info("Welcome to Movie Booking System")
@@ -103,16 +82,14 @@ if menu == "🏠 Dashboard":
 
 elif menu == "➕ Add Movie":
 
-    st.subheader("➕ Add New Movie")
+    st.subheader("➕ Add Movie")
 
     with st.form("add_movie"):
 
-        movie_name = st.text_input(
-            "🎥 Movie Name"
-        )
+        movie_name = st.text_input("Movie Name")
 
         seats = st.number_input(
-            "🎟️ Total Seats",
+            "Available Seats",
             min_value=1
         )
 
@@ -150,7 +127,7 @@ elif menu == "➕ Add Movie":
 
 elif menu == "📋 Show Movies":
 
-    st.subheader("🎥 Available Movies")
+    st.subheader("🎬 Available Movies")
 
     search = st.text_input(
         "🔍 Search Movie"
@@ -166,13 +143,13 @@ elif menu == "📋 Show Movies":
 
     for row in rows:
 
-        if search.lower() in row.MovieName.lower():
+        if search.lower() in row[1].lower():
 
             data.append(
                 {
-                    "Movie ID": row.MovieId,
-                    "Movie Name": row.MovieName,
-                    "Available Seats": row.AvailableSeats
+                    "Movie ID": row[0],
+                    "Movie Name": row[1],
+                    "Available Seats": row[2]
                 }
             )
 
@@ -182,7 +159,7 @@ elif menu == "📋 Show Movies":
 
         st.dataframe(
             df,
-            use_container_width=True
+            width="stretch"
         )
 
     else:
@@ -220,10 +197,12 @@ elif menu == "🎟️ Book Ticket":
 
         if movie:
 
-            if movie.AvailableSeats >= tickets:
+            available_seats = movie[0]
+
+            if available_seats >= tickets:
 
                 remaining = (
-                    movie.AvailableSeats
+                    available_seats
                     - tickets
                 )
 
@@ -287,10 +266,7 @@ elif menu == "❌ Cancel Ticket":
 
         if movie:
 
-            total = (
-                movie.AvailableSeats
-                + tickets
-            )
+            total = movie[0] + tickets
 
             cursor.execute(
                 """
@@ -307,7 +283,7 @@ elif menu == "❌ Cancel Ticket":
             conn.commit()
 
             st.success(
-                "Ticket Cancelled"
+                "Ticket Cancelled Successfully"
             )
 
         else:
