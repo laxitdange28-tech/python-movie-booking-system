@@ -1,4 +1,3 @@
-
 import streamlit as st
 from db import conn, cursor
 import pandas as pd
@@ -53,13 +52,16 @@ menu = st.sidebar.radio(
 
 if menu == "🏠 Dashboard":
 
-    cursor.execute("SELECT COUNT(*) FROM Movies")
-    total_movies = cursor.fetchone()[0]
+    df = pd.read_sql_query(
+        "SELECT * FROM Movies",
+        conn
+    )
 
-    cursor.execute("SELECT SUM(AvailableSeats) FROM Movies")
-    seats = cursor.fetchone()[0]
+    total_movies = len(df)
 
-    if seats is None:
+    if not df.empty:
+        seats = df["AvailableSeats"].sum()
+    else:
         seats = 0
 
     col1, col2 = st.columns(2)
@@ -86,7 +88,9 @@ elif menu == "➕ Add Movie":
 
     with st.form("add_movie"):
 
-        movie_name = st.text_input("Movie Name")
+        movie_name = st.text_input(
+            "Movie Name"
+        )
 
         seats = st.number_input(
             "Available Seats",
@@ -107,7 +111,10 @@ elif menu == "➕ Add Movie":
                     (MovieName, AvailableSeats)
                     VALUES (?,?)
                     """,
-                    (movie_name, seats)
+                    (
+                        movie_name,
+                        seats
+                    )
                 )
 
                 conn.commit()
@@ -118,7 +125,8 @@ elif menu == "➕ Add Movie":
 
                 st.balloons()
 
-            except:
+            except Exception:
+
                 st.error(
                     "Movie Already Exists"
                 )
@@ -127,42 +135,42 @@ elif menu == "➕ Add Movie":
 
 elif menu == "📋 Show Movies":
 
-    st.subheader("🎬 Available Movies")
+    st.subheader(
+        "🎬 Available Movies"
+    )
 
     search = st.text_input(
         "🔍 Search Movie"
     )
 
-    cursor.execute(
-        "SELECT * FROM Movies"
+    df = pd.read_sql_query(
+        "SELECT * FROM Movies",
+        conn
     )
 
-    rows = cursor.fetchall()
+    if search:
 
-    data = []
-
-    for row in rows:
-
-        if search.lower() in row[1].lower():
-
-            data.append(
-                {
-                    "Movie ID": row[0],
-                    "Movie Name": row[1],
-                    "Available Seats": row[2]
-                }
+        df = df[
+            df["MovieName"].str.contains(
+                search,
+                case=False,
+                na=False
             )
+        ]
 
-    if data:
-
-        df = pd.DataFrame(data)
+    if not df.empty:
 
         st.dataframe(
             df,
-            width="stretch"
+            use_container_width=True
         )
 
+        st.write("### Database Preview")
+
+        st.write(df)
+
     else:
+
         st.warning(
             "No Movies Found"
         )
@@ -171,7 +179,9 @@ elif menu == "📋 Show Movies":
 
 elif menu == "🎟️ Book Ticket":
 
-    st.subheader("🎟️ Book Ticket")
+    st.subheader(
+        "🎟️ Book Ticket"
+    )
 
     movie_name = st.text_input(
         "Movie Name"
@@ -182,7 +192,9 @@ elif menu == "🎟️ Book Ticket":
         min_value=1
     )
 
-    if st.button("Book Ticket"):
+    if st.button(
+        "Book Ticket"
+    ):
 
         cursor.execute(
             """
@@ -190,7 +202,9 @@ elif menu == "🎟️ Book Ticket":
             FROM Movies
             WHERE MovieName=?
             """,
-            (movie_name,)
+            (
+                movie_name,
+            )
         )
 
         movie = cursor.fetchone()
@@ -227,11 +241,13 @@ elif menu == "🎟️ Book Ticket":
                 st.balloons()
 
             else:
+
                 st.error(
                     "Seats Not Available"
                 )
 
         else:
+
             st.error(
                 "Movie Not Found"
             )
@@ -240,7 +256,9 @@ elif menu == "🎟️ Book Ticket":
 
 elif menu == "❌ Cancel Ticket":
 
-    st.subheader("❌ Cancel Ticket")
+    st.subheader(
+        "❌ Cancel Ticket"
+    )
 
     movie_name = st.text_input(
         "Movie Name"
@@ -251,7 +269,9 @@ elif menu == "❌ Cancel Ticket":
         min_value=1
     )
 
-    if st.button("Cancel Ticket"):
+    if st.button(
+        "Cancel Ticket"
+    ):
 
         cursor.execute(
             """
@@ -259,14 +279,19 @@ elif menu == "❌ Cancel Ticket":
             FROM Movies
             WHERE MovieName=?
             """,
-            (movie_name,)
+            (
+                movie_name,
+            )
         )
 
         movie = cursor.fetchone()
 
         if movie:
 
-            total = movie[0] + tickets
+            total = (
+                movie[0]
+                + tickets
+            )
 
             cursor.execute(
                 """
@@ -287,6 +312,7 @@ elif menu == "❌ Cancel Ticket":
             )
 
         else:
+
             st.error(
                 "Movie Not Found"
             )
@@ -295,20 +321,26 @@ elif menu == "❌ Cancel Ticket":
 
 elif menu == "🗑️ Delete Movie":
 
-    st.subheader("🗑️ Delete Movie")
+    st.subheader(
+        "🗑️ Delete Movie"
+    )
 
     movie_name = st.text_input(
         "Movie Name"
     )
 
-    if st.button("Delete Movie"):
+    if st.button(
+        "Delete Movie"
+    ):
 
         cursor.execute(
             """
             DELETE FROM Movies
             WHERE MovieName=?
             """,
-            (movie_name,)
+            (
+                movie_name,
+            )
         )
 
         conn.commit()
